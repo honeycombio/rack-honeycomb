@@ -41,6 +41,10 @@ module Rack
         request_ended_on = Time.now
 
         ev.add(headers)
+        if headers[CONTENT_LENGTH] != nil
+          # Content-Length (if present) is a string.  let's change it to an int.
+          ev.add_field(CONTENT_LENGTH, headers[CONTENT_LENGTH].to_i)
+        end
         add_field(ev, 'HTTP_STATUS', status)
         add_field(ev, 'REQUEST_TIME_MS', (request_ended_on - request_started_on) * 1000)
         add_env(ev, env, 'rack.version')
