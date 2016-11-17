@@ -3,7 +3,7 @@
 
 lib = File.expand_path('../lib', __FILE__)
 $LOAD_PATH.unshift(lib) unless $LOAD_PATH.include?(lib)
-require "lib/rack/honey/version"
+require "rack/honey/version"
 
 Gem::Specification.new do |spec|
   spec.name               = 'rack-honey'
