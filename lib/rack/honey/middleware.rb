@@ -19,6 +19,8 @@ module Rack
       def initialize(app, options = {})
         @app, @options = app, options
 
+        puts options
+        
         @honey = Libhoney::Client.new(:writekey => options['writekey'],
                                       :dataset  => options['dataset'],
                                       :api_host => options['api_host'])
