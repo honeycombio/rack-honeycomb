@@ -31,9 +31,9 @@ module Rack
 
       def call(env)
         ev = @honey.event
-        request_started_on = Time.now
+        request_started_at = Time.now
         status, headers, response = @app.call(env)
-        request_ended_on = Time.now
+        request_ended_at = Time.now
 
         ev.add(headers)
         if headers[CONTENT_LENGTH] != nil
@@ -41,7 +41,10 @@ module Rack
           ev.add_field(CONTENT_LENGTH, headers[CONTENT_LENGTH].to_i)
         end
         add_field(ev, 'HTTP_STATUS', status)
-        add_field(ev, 'REQUEST_TIME_MS', (request_ended_on - request_started_on) * 1000)
+        add_field(ev, 'REQUEST_TIME_MS', (request_ended_at - request_started_at) * 1000)
+
+        # we can't use `ev.add(env)` because json serialization fails.
+        # pull out some interesting and potentially useful fields.
         add_env(ev, env, 'rack.version')
         add_env(ev, env, 'rack.multithread')
         add_env(ev, env, 'rack.multiprocess')
