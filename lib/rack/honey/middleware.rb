@@ -10,17 +10,12 @@ module Rack
       ##
       # @param  [#call]                       app
       # @param  [Hash{Symbol => Object}]      options
-      # @option options [String]  :cache      (Hash.new)
-      # @option options [String]  :key        (nil)
-      # @option options [String]  :key_prefix (nil)
-      # @option options [Integer] :code       (403)
-      # @option options [String]  :message    ("Rate Limit Exceeded")
-      # @option options [String]  :type       ("text/plain; charset=utf-8")
+      # @option options [String]  :writekey   (nil)
+      # @option options [String]  :dataset    (nil)
+      # @option options [String]  :api_host   (nil)
       def initialize(app, options = {})
         @app, @options = app, options
 
-        puts options
-        
         @honey = Libhoney::Client.new(:writekey => options[:writekey],
                                       :dataset  => options[:dataset],
                                       :api_host => options[:api_host])
@@ -68,8 +63,6 @@ module Rack
         add_env(ev, env, 'HTTP_ACCEPT')
         add_env(ev, env, 'HTTP_ACCEPT_LANGUAGE')
         add_env(ev, env, 'REMOTE_ADDR')
-
-        puts "sending event!"
         ev.send
 
         [status, headers, response]
