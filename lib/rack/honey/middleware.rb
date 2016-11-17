@@ -21,9 +21,9 @@ module Rack
 
         puts options
         
-        @honey = Libhoney::Client.new(:writekey => options['writekey'],
-                                      :dataset  => options['dataset'],
-                                      :api_host => options['api_host'])
+        @honey = Libhoney::Client.new(:writekey => options[:writekey],
+                                      :dataset  => options[:dataset],
+                                      :api_host => options[:api_host])
       end
 
       def add_field(ev, field, value)
@@ -64,6 +64,8 @@ module Rack
         add_env(ev, env, 'HTTP_ACCEPT')
         add_env(ev, env, 'HTTP_ACCEPT_LANGUAGE')
         add_env(ev, env, 'REMOTE_ADDR')
+
+        puts "sending event!"
         ev.send
 
         [status, headers, response]
