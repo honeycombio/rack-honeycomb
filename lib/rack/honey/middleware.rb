@@ -19,7 +19,7 @@ module Rack
       def initialize(app, options = {})
         @app, @options = app, options
 
-        @honey = LibHoney::Client.new(:writekey => options['writekey'],
+        @honey = Libhoney::Client.new(:writekey => options['writekey'],
                                       :dataset  => options['dataset'],
                                       :api_host => options['api_host'])
       end
