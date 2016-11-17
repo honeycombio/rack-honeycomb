@@ -19,9 +19,9 @@ module Rack
       def initialize(app, options = {})
         @app, @options = app, options
 
-        @honey = LibHoney.new(:writekey => options['writekey'],
-                              :dataset  => options['dataset'],
-                              :api_host => options['api_host'])
+        @honey = LibHoney::Client.new(:writekey => options['writekey'],
+                                      :dataset  => options['dataset'],
+                                      :api_host => options['api_host'])
       end
 
       def add_field(ev, field, value)
