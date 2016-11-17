@@ -65,7 +65,7 @@ module Rack
         add_env(ev, env, 'REMOTE_ADDR')
         ev.send
 
-        [@status, @headers, @response]
+        return @status, @headers, @response
       end
     end
   end
