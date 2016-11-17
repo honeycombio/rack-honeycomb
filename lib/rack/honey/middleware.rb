@@ -35,12 +35,11 @@ module Rack
       def call(env)
         ev = @honey.event
         request_started_on = Time.now
-        @status, @headers, @response = @app.call(env)
+        status, headers, response = @app.call(env)
         request_ended_on = Time.now
 
-        ev.add(@headers)
-        add_field(ev, 'HTTP_STATUS', @status)
-        add_field(ev, 'RESPONSE_CONTENT_LENGTH', @response.body.length)
+        ev.add(headers)
+        add_field(ev, 'HTTP_STATUS', status)
         add_field(ev, 'REQUEST_TIME_MS', (request_ended_on - request_started_on) * 1000)
         add_env(ev, env, 'rack.version')
         add_env(ev, env, 'rack.multithread')
@@ -65,7 +64,7 @@ module Rack
         add_env(ev, env, 'REMOTE_ADDR')
         ev.send
 
-        return @status, @headers, @response
+        [status, headers, response]
       end
     end
   end
