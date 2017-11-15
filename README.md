@@ -1,6 +1,6 @@
 # Honeycomb middleware for Rack applications
 
-This is Rack middleware that sends request/response data to [Honeycomb](https://honeycomb.io).  You can use `Rack::Honey` with any Ruby web framework based on Rack, including Ruby on Rails and Sinatra.
+This is Rack middleware that sends request/response data to [Honeycomb](https://honeycomb.io).  You can use `Rack::Honeycomb` with any Ruby web framework based on Rack, including Ruby on Rails and Sinatra.
 
 For more information about using Honeycomb, check out our [docs](https://honeycomb.io/docs) and our [Ruby SDK](https://honeycomb.io/docs/connect/ruby/).
 
