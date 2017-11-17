@@ -5,3 +5,12 @@ rvm:
   - 2.4
 # TODO remove this line once we have tests to run
 script: "bundle exec ruby -Ilib -rrack/honeycomb/version -e 'puts Rack::Honeycomb::VERSION'"
+deploy:
+  provider: rubygems
+  gem: rack-honeycomb
+  on:
+    tags: true
+    repo: honeycombio/rack-honeycomb
+    ruby: '2.4'
+  api_key:
+    secure: 3LBnXx2nvN+kvMSwncD1WRiHdS9IlRO/MX2Vi797bYaxioNHEefqbttFtvVdHfxG2ZSTAVvaO8CD0L0tRCUiCHbEkZiJclO/DVuQ2M+C315kzTTf8ZTUB41oASQmP4RlgL2828BlFbkfEohsqGmDeW9VdYBROSlyX6yDgthdXfblkgs094D/hRSGD5y3rwb7rWLS9Bo6pho4bMC7vI9AUElNdnwztS6/t7GxhDdXV/A9hzx4imCJ5PSD8cMHPOgEK4AxQ/4INCl7oTh06KgmkAzHGHRErrT08XqOuAi6Dh6q4u4rXscuCXTI2MBHHeBqPQ52Fh4QmR4Jm8wy4OIsoisHlnnu99DaTI8eVraaM59oCQ5Ah20LfLKj5wHGO0NXbeO7xjdUbDOpwX29XDGIyfOUfgv7SN17Srub9au003HnC9dLJovpZ9c9sEsm1zUc8EPM3OKWPf3IMoS6xKxGYkn9DRzt2elJtfUAGJ6IY0mrvPJDICnT7E0mkUi9R5KPdz//sXVIPamsCuKRNN+gh119Yg7Kta6wqNVkId3RIToGIXz9kSqcb66PiOFjfA1sqStemXMdWzor/euf7skoMgDM22QpIEWR1j0TdOq3OLA7JFlJw3hlcAWrWU3Mg/0iMC/SmsnXH+uiepg1UH3hs3wB/OyC+NDI6O6D1tZ+R7s=
