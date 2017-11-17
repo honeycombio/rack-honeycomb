@@ -1,0 +1,4 @@
+language: ruby
+rvm:
+  # TODO add more Ruby versions to test once we... actually have tests
+  - 2.4
