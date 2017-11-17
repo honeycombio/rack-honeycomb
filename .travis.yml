@@ -3,3 +3,5 @@ rvm:
   - 2.2
   - 2.3
   - 2.4
+# TODO remove this line once we have tests to run
+script: "bundle exec ruby -Ilib -rrack/honeycomb/version -e 'puts Rack::Honeycomb::VERSION'"
