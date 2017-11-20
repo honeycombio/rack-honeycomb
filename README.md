@@ -4,17 +4,6 @@ This is Rack middleware that sends request/response data to [Honeycomb](https://
 
 For more information about using Honeycomb, check out our [docs](https://honeycomb.io/docs) and our [Ruby SDK](https://honeycomb.io/docs/connect/ruby/).
 
-## Adding instrumentation to a Rails application
-
-```ruby
-# config/application.rb
-require 'rack/honeycomb'
-
-class Application < Rails::Application
-  config.middleware.use Rack::Honeycomb::Middleware, writekey: "<YOUR WRITEKEY HERE>", dataset: "<YOUR DATASET NAME HERE>"
-end
-```
-
 ## Adding instrumentation to a Sinatra application
 
 ```ruby
@@ -25,6 +14,21 @@ require 'rack/honeycomb'
 use Rack::Honeycomb::Middleware, writekey: "<YOUR WRITEKEY HERE>", dataset: "<YOUR DATASET NAME HERE>"
 
 get('/hello') { "Hello, world!\n" }
+```
+
+## Adding instrumentation to a Rails application
+
+For more fully-featured Rails support, see [honeycomb-rails](https://github.com/honeycombio/honeycomb-rails).
+
+If honeycomb-rails doesn't work for you, this Rack middleware should work for Rails apps too:
+
+```ruby
+# config/application.rb
+require 'rack/honeycomb'
+
+class Application < Rails::Application
+  config.middleware.use Rack::Honeycomb::Middleware, writekey: "<YOUR WRITEKEY HERE>", dataset: "<YOUR DATASET NAME HERE>"
+end
 ```
 
 ## Installation
