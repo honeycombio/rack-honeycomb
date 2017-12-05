@@ -51,6 +51,10 @@ To follow the bleeding edge, it's easy to track the git repo:
 gem "rack-honeycomb", :git => "https://github.com/honeycombio/rack-honeycomb.git"
 ```
 
+## Documentation
+
+See [rubydoc](http://www.rubydoc.info/gems/rack-honeycomb/) for gem documentation.
+
 ## Contributions
 
 Features, bug fixes and other changes are gladly accepted. Please

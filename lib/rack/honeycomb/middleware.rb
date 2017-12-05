@@ -36,9 +36,9 @@ module Rack
         request_ended_at = Time.now
 
         ev.add(headers)
-        if headers[CONTENT_LENGTH] != nil
+        if headers['Content-Length'] != nil
           # Content-Length (if present) is a string.  let's change it to an int.
-          ev.add_field(CONTENT_LENGTH, headers[CONTENT_LENGTH].to_i)
+          ev.add_field('Content-Length', headers['Content-Length'].to_i)
         end
         add_field(ev, 'HTTP_STATUS', status)
         add_field(ev, 'REQUEST_TIME_MS', (request_ended_at - request_started_at) * 1000)
