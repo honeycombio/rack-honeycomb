@@ -2,8 +2,13 @@ require "libhoney"
 
 module Rack
   module Honeycomb
+    # Prefix for attaching arbitrary metadata to the `env`. Will be deleted from
+    # the `env` once it's pulled off of the `env` and onto a Honeycomb event.
+    ENV_PREFIX = "honeycomb."
 
     class Middleware
+      HEADER_REGEX = /^#{ Regexp.escape ENV_PREFIX }/
+
       attr_reader :app
       attr_reader :options
 
@@ -42,6 +47,15 @@ module Rack
         end
         add_field(ev, 'HTTP_STATUS', status)
         add_field(ev, 'REQUEST_TIME_MS', (request_ended_at - request_started_at) * 1000)
+
+        # Pull arbitrary metadata off `env` if the caller attached anything
+        # inside the Rack handler.
+        env.each_pair do |k, v|
+          if k.is_a?(String) && k.match(HEADER_REGEX)
+            add_field(ev, k.sub(HEADER_REGEX, ''), v)
+            env.delete(k)
+          end
+        end
 
         # we can't use `ev.add(env)` because json serialization fails.
         # pull out some interesting and potentially useful fields.
