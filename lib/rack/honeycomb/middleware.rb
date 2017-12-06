@@ -20,10 +20,12 @@ module Rack
       # @option options [String]  :api_host   (nil)
       def initialize(app, options = {})
         @app, @options = app, options
+      end
 
-        @honeycomb = Libhoney::Client.new(:writekey => options[:writekey],
-                                      :dataset  => options[:dataset],
-                                      :api_host => options[:api_host])
+      def honeycomb
+        Thread.current[:honeycomb_client] ||= Libhoney::Client.new(:writekey => @options[:writekey],
+                                                                   :dataset  => @options[:dataset],
+                                                                   :api_host => @options[:api_host])
       end
 
       def add_field(ev, field, value)
@@ -35,7 +37,7 @@ module Rack
       end
 
       def call(env)
-        ev = @honeycomb.event
+        ev = honeycomb.event
         request_started_at = Time.now
         status, headers, response = @app.call(env)
         request_ended_at = Time.now
