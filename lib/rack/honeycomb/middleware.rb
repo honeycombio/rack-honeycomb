@@ -7,7 +7,7 @@ module Rack
     ENV_PREFIX = "honeycomb."
 
     class Middleware
-      HEADER_REGEX = /^#{ Regexp.escape ENV_PREFIX }/
+      ENV_REGEX = /^#{ Regexp.escape ENV_PREFIX }/
 
       attr_reader :app
       attr_reader :options
@@ -51,8 +51,8 @@ module Rack
         # Pull arbitrary metadata off `env` if the caller attached anything
         # inside the Rack handler.
         env.each_pair do |k, v|
-          if k.is_a?(String) && k.match(HEADER_REGEX)
-            add_field(ev, k.sub(HEADER_REGEX, ''), v)
+          if k.is_a?(String) && k.match(ENV_REGEX)
+            add_field(ev, k.sub(ENV_REGEX, ''), v)
             env.delete(k)
           end
         end
