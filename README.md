@@ -6,6 +6,8 @@ For more information about using Honeycomb, check out our [docs](https://honeyco
 
 ## Adding instrumentation to a Sinatra application
 
+Attaching the middleware is simple. Inside handlers, you also have the choice of attaching custom metadata to be stripped off by the middleware.
+
 ```ruby
 #!/usr/bin/env ruby -rubygems
 require 'sinatra'
@@ -13,7 +15,10 @@ require 'rack/honeycomb'
 
 use Rack::Honeycomb::Middleware, writekey: "<YOUR WRITEKEY HERE>", dataset: "<YOUR DATASET NAME HERE>"
 
-get('/hello') { "Hello, world!\n" }
+get('/hello') do
+  env[Rack::Honeycomb::ENV_PREFIX + "handler"] = "hello world handler"
+  "Hello, world!\n"
+end
 ```
 
 ## Adding instrumentation to a Rails application
