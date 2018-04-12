@@ -1,4 +1,5 @@
 require "libhoney"
+require "rack/honeycomb/version"
 
 module Rack
   module Honeycomb
@@ -8,6 +9,7 @@ module Rack
 
     class Middleware
       ENV_REGEX = /^#{ Regexp.escape ENV_PREFIX }/
+      USER_AGENT_SUFFIX = "rack-honeycomb/#{VERSION}"
 
       attr_reader :app
       attr_reader :options
@@ -21,7 +23,7 @@ module Rack
       def initialize(app, options = {})
         @app, @options = app, options
 
-        @honeycomb = Libhoney::Client.new(options)
+        @honeycomb = Libhoney::Client.new(options.merge(user_agent_addition: USER_AGENT_SUFFIX))
       end
 
       def add_field(ev, field, value)
