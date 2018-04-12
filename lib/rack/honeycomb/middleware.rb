@@ -21,9 +21,7 @@ module Rack
       def initialize(app, options = {})
         @app, @options = app, options
 
-        @honeycomb = Libhoney::Client.new(:writekey => options[:writekey],
-                                      :dataset  => options[:dataset],
-                                      :api_host => options[:api_host])
+        @honeycomb = Libhoney::Client.new(options)
       end
 
       def add_field(ev, field, value)
