@@ -23,7 +23,14 @@ module Rack
       def initialize(app, options = {})
         @app, @options = app, options
 
-        @honeycomb = Libhoney::Client.new(options.merge(user_agent_addition: USER_AGENT_SUFFIX))
+        @honeycomb = if client = options.delete(:client)
+                       puts "client via options"
+                       client
+                     else
+                       puts "new client"
+                       Libhoney::Client.new(options.merge(user_agent_addition: USER_AGENT_SUFFIX))
+                     end
+        puts "gotaclient #{@honeycomb.class}"
       end
 
       def add_field(ev, field, value)
