@@ -1,5 +1,8 @@
 require "libhoney"
+
 require "rack/honeycomb/version"
+
+puts 'rack/honeycomb/middleware'
 
 module Rack
   module Honeycomb
