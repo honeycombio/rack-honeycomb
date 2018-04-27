@@ -26,11 +26,16 @@ module Rack
         @honeycomb = if client = options.delete(:client)
                        puts "client via options"
                        client
+                     elsif defined?(::Honeycomb.client)
+                       puts "client via global"
+                       ::Honeycomb.client
                      else
                        puts "new client"
                        Libhoney::Client.new(options.merge(user_agent_addition: USER_AGENT_SUFFIX))
                      end
         puts "gotaclient #{@honeycomb.class}"
+
+        @service_name = options.delete(:service_name) || :rack
       end
 
       def add_field(ev, field, value)
@@ -44,7 +49,10 @@ module Rack
       def call(env)
         ev = @honeycomb.event
         request_started_at = Time.now
-        status, headers, response = @app.call(env)
+        puts "gotareq"
+        status, headers, response = adding_span_metadata_if_available(ev, env) do
+          @app.call(env)
+        end
         request_ended_at = Time.now
 
         ev.add(headers)
@@ -53,7 +61,7 @@ module Rack
           ev.add_field('Content-Length', headers['Content-Length'].to_i)
         end
         add_field(ev, 'HTTP_STATUS', status)
-        add_field(ev, 'REQUEST_TIME_MS', (request_ended_at - request_started_at) * 1000)
+        add_field(ev, 'durationMs', (request_ended_at - request_started_at) * 1000)
 
         # Pull arbitrary metadata off `env` if the caller attached anything
         # inside the Rack handler.
@@ -87,9 +95,34 @@ module Rack
         add_env(ev, env, 'HTTP_ACCEPT')
         add_env(ev, env, 'HTTP_ACCEPT_LANGUAGE')
         add_env(ev, env, 'REMOTE_ADDR')
-        ev.send
 
         [status, headers, response]
+      rescue Exception => e
+        raise
+      ensure
+        if ev
+          if e
+            ev.add_field('exception_class', e.class.name)
+            ev.add_field('exception_message', e.message)
+          end
+          ev.send
+        end
+      end
+
+      private
+      def adding_span_metadata_if_available(event, env)
+        return yield unless defined?(::Honeycomb.with_trace_id)
+
+        ::Honeycomb.with_trace_id do |trace_id|
+          event.add_field :traceId, trace_id
+          event.add_field :serviceName, @service_name
+          event.add_field :name, "#{env['REQUEST_METHOD']} #{env['REQUEST_PATH']}"
+          span_id = trace_id # so this shows up as a root span
+          event.add_field :id, span_id
+          ::Honeycomb.with_span_id(span_id) do
+            yield
+          end
+        end
       end
     end
   end
