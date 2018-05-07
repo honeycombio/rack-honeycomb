@@ -121,5 +121,11 @@ module Rack
         end
       end
     end
+
+    class << self
+      def add_field(env, field, value)
+        env["#{ENV_PREFIX}#{field}"] = value
+      end
+    end
   end
 end
