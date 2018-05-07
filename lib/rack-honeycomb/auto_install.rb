@@ -43,6 +43,12 @@ module Rack
             end
             build_without_honeycomb(*args, &block)
           end
+
+          ::Sinatra::Base.include(Module.new do
+            def add_honeycomb_field(field, value)
+              ::Rack::Honeycomb.add_field(env, field, value)
+            end
+          end)
         end
 
         attr_accessor :already_added
