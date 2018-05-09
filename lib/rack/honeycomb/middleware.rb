@@ -12,9 +12,6 @@ module Rack
       ENV_REGEX = /^#{ Regexp.escape ENV_PREFIX }/
       USER_AGENT_SUFFIX = "rack-honeycomb/#{VERSION}"
 
-      attr_reader :app
-      attr_reader :options
-
       ##
       # @param  [#call]                       app
       # @param  [Hash{Symbol => Object}]      options
