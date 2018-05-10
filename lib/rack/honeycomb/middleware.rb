@@ -1,19 +1,24 @@
 require "libhoney"
 
+require 'rack'
 require "rack/honeycomb/version"
 
 module Rack
   module Honeycomb
-    # Prefix for attaching arbitrary metadata to the `env`. Will be deleted from
+    # Prefix for attaching custom fields to the `env`. Will be deleted from
     # the `env` once it's pulled off of the `env` and onto a Honeycomb event.
     ENV_PREFIX = "honeycomb."
+
+    # Custom fields added via the `env` will be added to the Honeycomb
+    # event under this namespace prefix
+    APP_FIELD_NAMESPACE = 'app'.freeze
+
+    RACK_VERSION = ::Rack::VERSION.join('.').freeze
 
     class Middleware
       ENV_REGEX = /^#{ Regexp.escape ENV_PREFIX }/
       USER_AGENT_SUFFIX = "rack-honeycomb/#{VERSION}"
-
-      attr_reader :app
-      attr_reader :options
+      EVENT_TYPE = 'http_request'.freeze
 
       ##
       # @param  [#call]                       app
@@ -24,88 +29,88 @@ module Rack
       def initialize(app, options = {})
         @app, @options = app, options
 
-        @honeycomb = if client = options.delete(:client)
+        honeycomb = if client = options.delete(:client)
                        client
                      elsif defined?(::Honeycomb.client)
                        ::Honeycomb.client
                      else
                        Libhoney::Client.new(options.merge(user_agent_addition: USER_AGENT_SUFFIX))
                      end
+        @builder = honeycomb.builder.
+          add(
+            'meta.package' => 'rack',
+            'meta.package_version' => RACK_VERSION,
+            'type' => EVENT_TYPE,
+            'local_hostname' => Socket.gethostname,
+          )
 
         @service_name = options.delete(:service_name) || :rack
       end
 
-      def add_field(ev, field, value)
-        ev.add_field(field, value) if value != nil && value != ''
-      end
-
-      def add_env(ev, env, field)
-        add_field(ev, field, env[field])
-      end
-
       def call(env)
-        ev = @honeycomb.event
-        request_started_at = Time.now
-        status, headers, response = adding_span_metadata_if_available(ev, env) do
+        ev = @builder.event
+
+        add_request_fields(ev, env)
+
+        start = Time.now
+        status, headers, body = adding_span_metadata_if_available(ev, env) do
           @app.call(env)
         end
-        request_ended_at = Time.now
 
-        ev.add(headers)
-        if headers['Content-Length'] != nil
-          # Content-Length (if present) is a string.  let's change it to an int.
-          ev.add_field('Content-Length', headers['Content-Length'].to_i)
-        end
-        add_field(ev, 'HTTP_STATUS', status)
-        add_field(ev, 'durationMs', (request_ended_at - request_started_at) * 1000)
+        add_app_fields(ev, env)
 
-        # Pull arbitrary metadata off `env` if the caller attached anything
-        # inside the Rack handler.
-        env.each_pair do |k, v|
-          if k.is_a?(String) && k.match(ENV_REGEX)
-            add_field(ev, k.sub(ENV_REGEX, ''), v)
-            env.delete(k)
-          end
-        end
+        add_response_fields(ev, status, headers, body)
 
-        # we can't use `ev.add(env)` because json serialization fails.
-        # pull out some interesting and potentially useful fields.
-        add_env(ev, env, 'rack.version')
-        add_env(ev, env, 'rack.multithread')
-        add_env(ev, env, 'rack.multiprocess')
-        add_env(ev, env, 'rack.run_once')
-        add_env(ev, env, 'SCRIPT_NAME')
-        add_env(ev, env, 'QUERY_STRING')
-        add_env(ev, env, 'SERVER_PROTOCOL')
-        add_env(ev, env, 'SERVER_SOFTWARE')
-        add_env(ev, env, 'GATEWAY_INTERFACE')
-        add_env(ev, env, 'REQUEST_METHOD')
-        add_env(ev, env, 'REQUEST_PATH')
-        add_env(ev, env, 'REQUEST_URI')
-        add_env(ev, env, 'HTTP_VERSION')
-        add_env(ev, env, 'HTTP_HOST')
-        add_env(ev, env, 'HTTP_CONNECTION')
-        add_env(ev, env, 'HTTP_CACHE_CONTROL')
-        add_env(ev, env, 'HTTP_UPGRADE_INSECURE_REQUESTS')
-        add_env(ev, env, 'HTTP_USER_AGENT')
-        add_env(ev, env, 'HTTP_ACCEPT')
-        add_env(ev, env, 'HTTP_ACCEPT_LANGUAGE')
-        add_env(ev, env, 'REMOTE_ADDR')
-
-        [status, headers, response]
+        [status, headers, body]
       rescue Exception => e
         if ev
-          ev.add_field('exception_class', e.class.name)
-          ev.add_field('exception_message', e.message)
+          ev.add_field('request.error', e.class.name)
+          ev.add_field('request.error_detail', e.message)
         end
         raise
       ensure
-        if ev
+        if ev && start
+          finish = Time.now
+          ev.add_field('duration_ms', (finish - start) * 1000)
+
           ev.send
         end
       end
 
       private
+      def add_request_fields(event, env)
+        event.add_field('name', "#{env['REQUEST_METHOD']} #{env['PATH_INFO']}")
+
+        event.add_field('request.method', env['REQUEST_METHOD'])
+        event.add_field('request.path', env['PATH_INFO'])
+        event.add_field('request.protocol', env['rack.url_scheme'])
+
+        if env['QUERY_STRING'] && !env['QUERY_STRING'].empty?
+          event.add_field('request.query_string', env['QUERY_STRING'])
+        end
+
+        event.add_field('request.http_version', env['HTTP_VERSION'])
+        event.add_field('request.host', env['HTTP_HOST'])
+        event.add_field('request.remote_addr', env['REMOTE_ADDR'])
+        event.add_field('request.header.user_agent', env['HTTP_USER_AGENT'])
+      end
+
+      def add_app_fields(event, env)
+        # Pull arbitrary metadata off `env` if the caller attached
+        # anything inside the Rack handler.
+        env.each_pair do |k, v|
+          if k.is_a?(String) && k.match(ENV_REGEX)
+            namespaced_k = "#{APP_FIELD_NAMESPACE}.#{k.sub(ENV_REGEX, '')}"
+            event.add_field(namespaced_k, v)
+            env.delete(k)
+          end
+        end
+      end
+
+      def add_response_fields(event, status, headers, body)
+        event.add_field('response.status_code', status)
+      end
+
       def adding_span_metadata_if_available(event, env)
         return yield unless defined?(::Honeycomb.with_trace_id)
 
