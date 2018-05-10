@@ -1,4 +1,5 @@
 require 'libhoney'
+require 'socket'
 
 require 'rack/honeycomb/middleware'
 
@@ -30,6 +31,13 @@ RSpec.describe Rack::Honeycomb::Middleware do
     before { get '/' }
     let(:event) { emitted_event }
 
+    it 'sends an http_request event' do
+      expect(event.data).to include(
+        'type' => 'http_request',
+        'name' => 'GET /',
+      )
+    end
+
     it 'includes basic request and response fields' do
       expect(event.data).to include(
         'request.method' => 'GET',
@@ -43,6 +51,13 @@ RSpec.describe Rack::Honeycomb::Middleware do
       expect(event.data).to include('duration_ms')
       expect(event.data['duration_ms']).to be_a Numeric
     end
+
+    it 'includes meta fields in the event' do
+      expect(event.data).to include(
+        'meta.package' => 'rack',
+        'meta.package_version' => '1.3',
+      )
+    end
   end
 
   describe 'more detailed request fields' do
@@ -53,6 +68,8 @@ RSpec.describe Rack::Honeycomb::Middleware do
     subject { emitted_event.data }
 
     it { is_expected.to include('request.protocol' => 'https') }
+
+    it { is_expected.to include('local_hostname' => Socket.gethostname) }
 
     it { is_expected.to include('request.host' => 'search.example.org') }
 

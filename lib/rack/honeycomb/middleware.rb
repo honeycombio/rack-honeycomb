@@ -1,5 +1,6 @@
 require "libhoney"
 
+require 'rack'
 require "rack/honeycomb/version"
 
 module Rack
@@ -8,9 +9,12 @@ module Rack
     # the `env` once it's pulled off of the `env` and onto a Honeycomb event.
     ENV_PREFIX = "honeycomb."
 
+    RACK_VERSION = ::Rack::VERSION.join('.').freeze
+
     class Middleware
       ENV_REGEX = /^#{ Regexp.escape ENV_PREFIX }/
       USER_AGENT_SUFFIX = "rack-honeycomb/#{VERSION}"
+      EVENT_TYPE = 'http_request'.freeze
 
       ##
       # @param  [#call]                       app
@@ -21,19 +25,26 @@ module Rack
       def initialize(app, options = {})
         @app, @options = app, options
 
-        @honeycomb = if client = options.delete(:client)
+        honeycomb = if client = options.delete(:client)
                        client
                      elsif defined?(::Honeycomb.client)
                        ::Honeycomb.client
                      else
                        Libhoney::Client.new(options.merge(user_agent_addition: USER_AGENT_SUFFIX))
                      end
+        @builder = honeycomb.builder.
+          add(
+            'meta.package' => 'rack',
+            'meta.package_version' => RACK_VERSION,
+            'type' => EVENT_TYPE,
+            'local_hostname' => Socket.gethostname,
+          )
 
         @service_name = options.delete(:service_name) || :rack
       end
 
       def call(env)
-        ev = @honeycomb.event
+        ev = @builder.event
 
         add_request_fields(ev, env)
 
@@ -71,6 +82,8 @@ module Rack
 
       private
       def add_request_fields(event, env)
+        event.add_field('name', "#{env['REQUEST_METHOD']} #{env['PATH_INFO']}")
+
         event.add_field('request.method', env['REQUEST_METHOD'])
         event.add_field('request.path', env['PATH_INFO'])
         event.add_field('request.protocol', env['rack.url_scheme'])
