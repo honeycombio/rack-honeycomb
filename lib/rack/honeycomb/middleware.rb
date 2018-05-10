@@ -32,29 +32,16 @@ module Rack
         @service_name = options.delete(:service_name) || :rack
       end
 
-      def add_field(ev, field, value)
-        ev.add_field(field, value) if value != nil && value != ''
-      end
-
-      def add_env(ev, env, field)
-        add_field(ev, field, env[field])
-      end
-
       def call(env)
         ev = @honeycomb.event
+
+        add_request_fields(ev, env)
+
         request_started_at = Time.now
-        status, headers, response = adding_span_metadata_if_available(ev, env) do
+        status, headers, body = adding_span_metadata_if_available(ev, env) do
           @app.call(env)
         end
         request_ended_at = Time.now
-
-        ev.add(headers)
-        if headers['Content-Length'] != nil
-          # Content-Length (if present) is a string.  let's change it to an int.
-          ev.add_field('Content-Length', headers['Content-Length'].to_i)
-        end
-        add_field(ev, 'HTTP_STATUS', status)
-        add_field(ev, 'durationMs', (request_ended_at - request_started_at) * 1000)
 
         # Pull arbitrary metadata off `env` if the caller attached anything
         # inside the Rack handler.
@@ -65,35 +52,15 @@ module Rack
           end
         end
 
-        # we can't use `ev.add(env)` because json serialization fails.
-        # pull out some interesting and potentially useful fields.
-        add_env(ev, env, 'rack.version')
-        add_env(ev, env, 'rack.multithread')
-        add_env(ev, env, 'rack.multiprocess')
-        add_env(ev, env, 'rack.run_once')
-        add_env(ev, env, 'SCRIPT_NAME')
-        add_env(ev, env, 'QUERY_STRING')
-        add_env(ev, env, 'SERVER_PROTOCOL')
-        add_env(ev, env, 'SERVER_SOFTWARE')
-        add_env(ev, env, 'GATEWAY_INTERFACE')
-        add_env(ev, env, 'REQUEST_METHOD')
-        add_env(ev, env, 'REQUEST_PATH')
-        add_env(ev, env, 'REQUEST_URI')
-        add_env(ev, env, 'HTTP_VERSION')
-        add_env(ev, env, 'HTTP_HOST')
-        add_env(ev, env, 'HTTP_CONNECTION')
-        add_env(ev, env, 'HTTP_CACHE_CONTROL')
-        add_env(ev, env, 'HTTP_UPGRADE_INSECURE_REQUESTS')
-        add_env(ev, env, 'HTTP_USER_AGENT')
-        add_env(ev, env, 'HTTP_ACCEPT')
-        add_env(ev, env, 'HTTP_ACCEPT_LANGUAGE')
-        add_env(ev, env, 'REMOTE_ADDR')
+        add_response_fields(ev, status, headers, body)
 
-        [status, headers, response]
+        ev.add_field('duration_ms', (request_ended_at - request_started_at) * 1000)
+
+        [status, headers, body]
       rescue Exception => e
         if ev
-          ev.add_field('exception_class', e.class.name)
-          ev.add_field('exception_message', e.message)
+          ev.add_field('request.error', e.class.name)
+          ev.add_field('request.error_detail', e.message)
         end
         raise
       ensure
@@ -103,6 +70,27 @@ module Rack
       end
 
       private
+      def add_request_fields(event, env)
+        event.add_field('name', "#{env['REQUEST_METHOD']} #{env['PATH_INFO']}")
+
+        event.add_field('request.method', env['REQUEST_METHOD'])
+        event.add_field('request.path', env['PATH_INFO'])
+        event.add_field('request.protocol', env['rack.url_scheme'])
+
+        if env['QUERY_STRING'] && !env['QUERY_STRING'].empty?
+          event.add_field('request.query_string', env['QUERY_STRING'])
+        end
+
+        event.add_field('request.http_version', env['HTTP_VERSION'])
+        event.add_field('request.host', env['HTTP_HOST'])
+        event.add_field('request.remote_addr', env['REMOTE_ADDR'])
+        event.add_field('request.header.user_agent', env['HTTP_USER_AGENT'])
+      end
+
+      def add_response_fields(event, status, headers, body)
+        event.add_field('response.status_code', status)
+      end
+
       def adding_span_metadata_if_available(event, env)
         return yield unless defined?(::Honeycomb.with_trace_id)
 
