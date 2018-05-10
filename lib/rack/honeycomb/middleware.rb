@@ -52,17 +52,14 @@ module Rack
 
         add_request_fields(ev, env)
 
-        request_started_at = Time.now
+        start = Time.now
         status, headers, body = adding_span_metadata_if_available(ev, env) do
           @app.call(env)
         end
-        request_ended_at = Time.now
 
         add_app_fields(ev, env)
 
         add_response_fields(ev, status, headers, body)
-
-        ev.add_field('duration_ms', (request_ended_at - request_started_at) * 1000)
 
         [status, headers, body]
       rescue Exception => e
@@ -72,7 +69,10 @@ module Rack
         end
         raise
       ensure
-        if ev
+        if ev && start
+          finish = Time.now
+          ev.add_field('duration_ms', (finish - start) * 1000)
+
           ev.send
         end
       end

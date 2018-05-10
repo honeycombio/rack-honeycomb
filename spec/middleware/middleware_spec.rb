@@ -97,6 +97,11 @@ RSpec.describe Rack::Honeycomb::Middleware do
       expect(event.data).to include('request.method', 'request.path', 'request.protocol')
     end
 
+    it 'still includes duration' do
+      expect(event.data).to include('duration_ms')
+      expect(event.data['duration_ms']).to be_a Numeric
+    end
+
     it 'captures exceptions' do
       expect(event.data).to include(
         'request.error' => 'RuntimeError',
