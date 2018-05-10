@@ -5,9 +5,13 @@ require "rack/honeycomb/version"
 
 module Rack
   module Honeycomb
-    # Prefix for attaching arbitrary metadata to the `env`. Will be deleted from
+    # Prefix for attaching custom fields to the `env`. Will be deleted from
     # the `env` once it's pulled off of the `env` and onto a Honeycomb event.
     ENV_PREFIX = "honeycomb."
+
+    # Custom fields added via the `env` will be added to the Honeycomb
+    # event under this namespace prefix
+    APP_FIELD_NAMESPACE = 'app'.freeze
 
     RACK_VERSION = ::Rack::VERSION.join('.').freeze
 
@@ -54,14 +58,7 @@ module Rack
         end
         request_ended_at = Time.now
 
-        # Pull arbitrary metadata off `env` if the caller attached anything
-        # inside the Rack handler.
-        env.each_pair do |k, v|
-          if k.is_a?(String) && k.match(ENV_REGEX)
-            add_field(ev, k.sub(ENV_REGEX, ''), v)
-            env.delete(k)
-          end
-        end
+        add_app_fields(ev, env)
 
         add_response_fields(ev, status, headers, body)
 
@@ -96,6 +93,18 @@ module Rack
         event.add_field('request.host', env['HTTP_HOST'])
         event.add_field('request.remote_addr', env['REMOTE_ADDR'])
         event.add_field('request.header.user_agent', env['HTTP_USER_AGENT'])
+      end
+
+      def add_app_fields(event, env)
+        # Pull arbitrary metadata off `env` if the caller attached
+        # anything inside the Rack handler.
+        env.each_pair do |k, v|
+          if k.is_a?(String) && k.match(ENV_REGEX)
+            namespaced_k = "#{APP_FIELD_NAMESPACE}.#{k.sub(ENV_REGEX, '')}"
+            event.add_field(namespaced_k, v)
+            env.delete(k)
+          end
+        end
       end
 
       def add_response_fields(event, status, headers, body)

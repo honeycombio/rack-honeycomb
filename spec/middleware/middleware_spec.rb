@@ -104,4 +104,22 @@ RSpec.describe Rack::Honeycomb::Middleware do
       )
     end
   end
+
+  describe 'Rack::Honeycomb.add_field' do
+    let(:app) do
+      base_app = lambda do |env|
+        Rack::Honeycomb.add_field(env, :hovercraft_contents, 'eels')
+        [200, {}, ['hello']]
+      end
+      with_middleware(base_app)
+    end
+
+    before { get '/' }
+
+    let(:event) { emitted_event }
+
+    it 'includes user-supplied fields, namespaced under "app"' do
+      expect(event.data).to include('app.hovercraft_contents' => 'eels')
+    end
+  end
 end
