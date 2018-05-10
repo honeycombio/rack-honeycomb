@@ -71,8 +71,6 @@ module Rack
 
       private
       def add_request_fields(event, env)
-        event.add_field('name', "#{env['REQUEST_METHOD']} #{env['PATH_INFO']}")
-
         event.add_field('request.method', env['REQUEST_METHOD'])
         event.add_field('request.path', env['PATH_INFO'])
         event.add_field('request.protocol', env['rack.url_scheme'])
