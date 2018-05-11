@@ -8,7 +8,6 @@ require "rack/honeycomb/version"
 Gem::Specification.new do |spec|
   spec.name               = 'rack-honeycomb'
   spec.version            = Rack::Honeycomb::VERSION
-  spec.date               = "2016-11-17"
 
   spec.homepage           = 'https://github.com/honeycombio/rack-honeycomb'
   spec.license            = 'Apache-2.0'
