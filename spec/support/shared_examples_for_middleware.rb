@@ -46,7 +46,7 @@ RSpec.shared_examples 'Rack::Honeycomb::Middleware' do
 
     it { is_expected.to include('request.protocol' => 'https') }
 
-    it { is_expected.to include('local_hostname' => Socket.gethostname) }
+    it { is_expected.to include('meta.local_hostname' => Socket.gethostname) }
 
     it { is_expected.to include('request.host' => 'search.example.org') }
 

@@ -41,7 +41,7 @@ module Rack
             'meta.package' => 'rack',
             'meta.package_version' => RACK_VERSION,
             'type' => EVENT_TYPE,
-            'local_hostname' => Socket.gethostname,
+            'meta.local_hostname' => Socket.gethostname,
           )
 
         @service_name = options.delete(:service_name) || :rack
