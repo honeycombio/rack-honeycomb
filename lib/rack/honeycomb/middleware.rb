@@ -18,7 +18,7 @@ module Rack
     class Middleware
       ENV_REGEX = /^#{ Regexp.escape ENV_PREFIX }/
       USER_AGENT_SUFFIX = "rack-honeycomb/#{VERSION}"
-      EVENT_TYPE = 'http_request'.freeze
+      EVENT_TYPE = 'http_server'.freeze
 
       ##
       # @param  [#call]                       app

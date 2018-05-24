@@ -8,9 +8,9 @@ RSpec.shared_examples 'Rack::Honeycomb::Middleware' do
   describe 'after the app processes a request' do
     before { get '/' }
 
-    it 'sends an http_request event' do
+    it 'sends an http_server event' do
       expect(emitted_event.data).to include(
-        'type' => 'http_request',
+        'type' => 'http_server',
         'name' => 'GET /',
       )
     end
