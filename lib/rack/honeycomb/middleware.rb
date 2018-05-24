@@ -115,11 +115,9 @@ module Rack
         return yield unless defined?(::Honeycomb.with_trace_id)
 
         ::Honeycomb.with_trace_id do |trace_id|
-          event.add_field :traceId, trace_id
-          event.add_field :serviceName, @service_name
-          event.add_field :name, "#{env['REQUEST_METHOD']} #{env['REQUEST_PATH']}"
+          event.add_field 'trace.id', trace_id
           span_id = trace_id # so this shows up as a root span
-          event.add_field :id, span_id
+          event.add_field 'trace.span_id', span_id
           ::Honeycomb.with_span_id(span_id) do
             yield
           end
