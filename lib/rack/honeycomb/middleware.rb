@@ -29,11 +29,17 @@ module Rack
       def initialize(app, options = {})
         @app, @options = app, options
 
+        @logger = options.delete(:logger)
+        @logger ||= ::Honeycomb.logger if defined?(::Honeycomb.logger)
+
         honeycomb = if client = options.delete(:client)
+                       debug "initialized with #{client.class.name} via :client option"
                        client
                      elsif defined?(::Honeycomb.client)
+                       debug "initialized with #{::Honeycomb.client.class.name} from honeycomb-beeline"
                        ::Honeycomb.client
                      else
+                       debug "initializing new Libhoney::Client"
                        Libhoney::Client.new(options.merge(user_agent_addition: USER_AGENT_SUFFIX))
                      end
         @builder = honeycomb.builder.
@@ -78,6 +84,10 @@ module Rack
       end
 
       private
+      def debug(msg)
+        @logger.debug("#{self.class.name}: #{msg}") if @logger
+      end
+
       def add_request_fields(event, env)
         event.add_field('name', "#{env['REQUEST_METHOD']} #{env['PATH_INFO']}")
 

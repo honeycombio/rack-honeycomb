@@ -5,7 +5,9 @@ module Rack
       class << self
         def available?(logger: nil)
           gem 'rack'
+          logger.debug "#{self.name}: detected rack" if logger
           gem 'sinatra'
+          logger.debug "#{self.name}: detected sinatra, okay to autoinitialise" if logger
           true
         rescue Gem::LoadError => e
           if e.name == 'sinatra'
@@ -26,7 +28,9 @@ module Rack
 
           ::Sinatra::Base.define_singleton_method(:build) do |*args, &block|
             if !AutoInstall.already_added
-              self.use Rack::Honeycomb::Middleware, client: honeycomb_client
+              logger.debug "Adding Rack::Honeycomb::Middleware to #{self}" if logger
+
+              self.use Rack::Honeycomb::Middleware, client: honeycomb_client, logger: logger
               AutoInstall.already_added = true
             else
               # In the case of nested Sinatra apps - apps composed of other apps
@@ -35,9 +39,8 @@ module Rack
               # each child app. In that case, it's hard to hook in our
               # middleware reliably - so instead, we just want to warn the user
               # and avoid doing anything silly.
-
               unless AutoInstall.already_warned
-                warn "Honeycomb auto-instrumentation of Sinatra will probably not work, try manual installation"
+                logger.warn "Honeycomb auto-instrumentation of Sinatra will probably not work, try manual installation" if logger
                 AutoInstall.already_warned = true
               end
             end
