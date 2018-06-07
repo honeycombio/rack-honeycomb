@@ -11,7 +11,9 @@ module Rack
           true
         rescue Gem::LoadError => e
           if e.name == 'sinatra'
-            logger.debug "Couldn't detect web framework, not autoinitialising rack-honeycomb" if logger
+            logger.debug "Couldn't detect web framework (#{e.class}: #{e.message}), not autoinitialising rack-honeycomb" if logger
+          else
+            logger.debug "Rack not detected (#{e.class}: #{e.message}), not autoinitialising rack-honeycomb" if logger
           end
           false
         end
