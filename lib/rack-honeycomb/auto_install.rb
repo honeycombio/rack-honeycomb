@@ -4,21 +4,26 @@ module Rack
     module AutoInstall
       class << self
         def available?(logger: nil)
-          gem 'rack'
-          logger.debug "#{self.name}: detected rack" if logger
-          gem 'sinatra'
-          logger.debug "#{self.name}: detected sinatra, okay to autoinitialise" if logger
-          true
-        rescue Gem::LoadError => e
-          if e.name == 'sinatra'
-            logger.debug "Couldn't detect web framework (#{e.class}: #{e.message}), not autoinitialising rack-honeycomb" if logger
-          else
-            logger.debug "Rack not detected (#{e.class}: #{e.message}), not autoinitialising rack-honeycomb" if logger
+          @logger = logger
+
+          unless has_gem? 'rack'
+            debug 'not autoinitialising rack-honeycomb'
+            return false
           end
-          false
+
+          @has_sinatra = has_gem? 'sinatra'
+
+          unless @has_sinatra
+            debug "Couldn't detect web framework, not autoinitialising rack-honeycomb"
+            return false
+          end
+
+          true
         end
 
         def auto_install!(honeycomb_client:, logger: nil)
+          @logger = logger
+
           require 'rack'
           require 'sinatra/base'
 
@@ -30,7 +35,7 @@ module Rack
 
           ::Sinatra::Base.define_singleton_method(:build) do |*args, &block|
             if !AutoInstall.already_added
-              logger.debug "Adding Rack::Honeycomb::Middleware to #{self}" if logger
+              AutoInstall.debug "Adding Rack::Honeycomb::Middleware to #{self}"
 
               self.use Rack::Honeycomb::Middleware, client: honeycomb_client, logger: logger
               AutoInstall.already_added = true
@@ -42,7 +47,7 @@ module Rack
               # middleware reliably - so instead, we just want to warn the user
               # and avoid doing anything silly.
               unless AutoInstall.already_warned
-                logger.warn "Honeycomb auto-instrumentation of Sinatra will probably not work, try manual installation" if logger
+                AutoInstall.warn 'Honeycomb auto-instrumentation of Sinatra will probably not work, try manual installation'
                 AutoInstall.already_warned = true
               end
             end
@@ -58,6 +63,24 @@ module Rack
 
         attr_accessor :already_added
         attr_accessor :already_warned
+
+        def debug(msg)
+          @logger.debug "#{self.name}: #{msg}" if @logger
+        end
+
+        def warn(*args)
+          @logger.warn "#{self.name}: #{msg}" if @logger
+        end
+
+        private
+        def has_gem?(gem_name)
+          gem gem_name
+          debug "detected #{gem_name}"
+          true
+        rescue Gem::LoadError => e
+          debug "#{gem_name} not detected (#{e.class}: #{e.message})"
+          false
+        end
       end
     end
   end
