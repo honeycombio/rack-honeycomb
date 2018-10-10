@@ -97,6 +97,7 @@ module Rack
 
       def add_request_fields(event, env)
         event.add_field('name', "#{env['REQUEST_METHOD']} #{env['PATH_INFO']}")
+        # N.B. 'name' may be overwritten later by add_sinatra_fields
 
         event.add_field('request.method', env['REQUEST_METHOD'])
         event.add_field('request.path', env['PATH_INFO'])
@@ -113,7 +114,10 @@ module Rack
       end
 
       def add_sinatra_fields(event, env)
-        event.add_field('request.route', env['sinatra.route'])
+        route = env['sinatra.route']
+        event.add_field('request.route', route)
+        # overwrite 'name' (previously set in add_request_fields)
+        event.add_field('name', route)
       end
 
       def add_app_fields(event, env)
