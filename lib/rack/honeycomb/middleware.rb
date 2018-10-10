@@ -51,8 +51,6 @@ module Rack
             'meta.local_hostname' => Socket.gethostname,
           )
 
-        @service_name = options.delete(:service_name) || :rack
-
         @is_sinatra = options.delete(:is_sinatra)
         debug 'Enabling Sinatra-specific fields' if @is_sinatra
       end
