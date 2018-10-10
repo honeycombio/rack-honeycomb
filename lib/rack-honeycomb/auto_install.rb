@@ -37,7 +37,7 @@ module Rack
             if !AutoInstall.already_added
               AutoInstall.debug "Adding Rack::Honeycomb::Middleware to #{self}"
 
-              self.use Rack::Honeycomb::Middleware, client: honeycomb_client, logger: logger
+              self.use Rack::Honeycomb::Middleware, client: honeycomb_client, logger: logger, is_sinatra: true
               AutoInstall.already_added = true
             else
               # In the case of nested Sinatra apps - apps composed of other apps

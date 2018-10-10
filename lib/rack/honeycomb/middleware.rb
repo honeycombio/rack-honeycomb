@@ -26,6 +26,7 @@ module Rack
       # @option options [String]  :writekey   (nil)
       # @option options [String]  :dataset    (nil)
       # @option options [String]  :api_host   (nil)
+      # @option options [Boolean] :is_sinatra (false)
       def initialize(app, options = {})
         @app, @options = app, options
 
@@ -51,6 +52,9 @@ module Rack
           )
 
         @service_name = options.delete(:service_name) || :rack
+
+        @is_sinatra = options.delete(:is_sinatra)
+        debug 'Enabling Sinatra-specific fields' if @is_sinatra
       end
 
       def call(env)
@@ -62,6 +66,11 @@ module Rack
         status, headers, body = adding_span_metadata_if_available(ev, env) do
           @app.call(env)
         end
+
+        # TODO seems to need to be called _after_ processing the request. Would
+        # be better if we could do it before. Can we do that by changing
+        # middleware order?
+        add_sinatra_fields(ev, env) if @is_sinatra
 
         add_app_fields(ev, env)
 
@@ -103,6 +112,10 @@ module Rack
         event.add_field('request.host', env['HTTP_HOST'])
         event.add_field('request.remote_addr', env['REMOTE_ADDR'])
         event.add_field('request.header.user_agent', env['HTTP_USER_AGENT'])
+      end
+
+      def add_sinatra_fields(event, env)
+        event.add_field('request.route', env['sinatra.route'])
       end
 
       def add_app_fields(event, env)
