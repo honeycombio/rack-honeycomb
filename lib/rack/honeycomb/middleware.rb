@@ -20,6 +20,8 @@ module Rack
       USER_AGENT_SUFFIX = "rack-honeycomb/#{VERSION}"
       EVENT_TYPE = 'http_server'.freeze
 
+      RAILS_SPECIAL_PARAMS = %w(controller action).freeze
+
       ##
       # @param  [#call]                       app
       # @param  [Hash{Symbol => Object}]      options
@@ -27,6 +29,7 @@ module Rack
       # @option options [String]  :dataset    (nil)
       # @option options [String]  :api_host   (nil)
       # @option options [Boolean] :is_sinatra (false)
+      # @option options [Boolean] :is_rails   (false)
       def initialize(app, options = {})
         @app, @options = app, options
 
@@ -35,11 +38,16 @@ module Rack
 
         @is_sinatra = options.delete(:is_sinatra)
         debug 'Enabling Sinatra-specific fields' if @is_sinatra
+        @is_rails = options.delete(:is_rails)
+        debug 'Enabling Rails-specific fields' if @is_rails
 
         # report meta.package = rack only if we have no better information
         package = 'rack'
         package_version = RACK_VERSION
-        if @is_sinatra
+        if @is_rails
+          package = 'rails'
+          package_version = ::Rails::VERSION::STRING
+        elsif @is_sinatra
           package = 'sinatra'
           package_version = ::Sinatra::VERSION
         end
@@ -88,6 +96,7 @@ module Rack
           ev.add_field('duration_ms', (finish - start) * 1000)
 
           add_sinatra_fields(ev, env) if @is_sinatra
+          add_rails_fields(ev, env) if @is_rails
 
           add_app_fields(ev, env)
 
@@ -102,7 +111,8 @@ module Rack
 
       def add_request_fields(event, env)
         event.add_field('name', "#{env['REQUEST_METHOD']} #{env['PATH_INFO']}")
-        # N.B. 'name' may be overwritten later by add_sinatra_fields
+        # N.B. 'name' may be overwritten later by add_sinatra_fields or
+        # add_rails_fields
 
         event.add_field('request.method', env['REQUEST_METHOD'])
         event.add_field('request.path', env['PATH_INFO'])
@@ -123,6 +133,26 @@ module Rack
         event.add_field('request.route', route)
         # overwrite 'name' (previously set in add_request_fields)
         event.add_field('name', route)
+      end
+
+      def add_rails_fields(event, env)
+        # TODO what minimum Rails version does this need?
+        rails_params = env['action_dispatch.request.parameters']
+        unless rails_params.kind_of? Hash
+          debug "Got unexpected type #{rails_params.class} for env['action_dispatch.request.parameters']"
+          return
+        end
+
+        rails_params.each do |param, value|
+          if RAILS_SPECIAL_PARAMS.include?(param)
+            event.add_field("request.#{param}", value)
+          else
+            event.add_field("request.params.#{param}", value)
+          end
+        end
+
+        # overwrite 'name' (previously set in add_request_fields)
+        event.add_field('name', "#{rails_params[:controller]}##{rails_params[:action]}")
       end
 
       def add_app_fields(event, env)

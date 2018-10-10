@@ -12,8 +12,9 @@ module Rack
           end
 
           @has_sinatra = has_gem? 'sinatra'
+          @has_rails = has_gem? 'rails'
 
-          unless @has_sinatra
+          unless @has_sinatra || @has_rails
             debug "Couldn't detect web framework, not autoinitialising rack-honeycomb"
             return false
           end
@@ -25,9 +26,14 @@ module Rack
           @logger = logger
 
           require 'rack'
-          require 'sinatra/base'
-
           require 'rack-honeycomb'
+
+          auto_install_sinatra!(honeycomb_client, logger) if @has_sinatra
+          auto_install_rails!(honeycomb_client, logger) if @has_rails
+        end
+
+        def auto_install_sinatra!(honeycomb_client, logger)
+          require 'sinatra/base'
 
           class << ::Sinatra::Base
             alias build_without_honeycomb build
@@ -59,6 +65,15 @@ module Rack
               ::Rack::Honeycomb.add_field(env, field, value)
             end
           end)
+        end
+
+        def auto_install_rails!(honeycomb_client, logger)
+          require 'rack-honeycomb/railtie'
+          ::Rack::Honeycomb::Railtie.init(
+            honeycomb_client: honeycomb_client,
+            logger: logger,
+          )
+          debug 'Loaded Railtie'
         end
 
         attr_accessor :already_added
