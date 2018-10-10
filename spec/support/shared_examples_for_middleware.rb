@@ -9,10 +9,7 @@ RSpec.shared_examples 'Rack::Honeycomb::Middleware' do
     before { get '/' }
 
     it 'sends an http_server event' do
-      expect(emitted_event.data).to include(
-        'type' => 'http_server',
-        'name' => 'GET /',
-      )
+      expect(emitted_event.data).to include('type' => 'http_server')
     end
 
     it 'includes basic request and response fields' do

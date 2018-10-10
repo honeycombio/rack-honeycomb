@@ -15,6 +15,8 @@ RACK_APP = lambda do |env|
   when '/annotated'
     Rack::Honeycomb.add_field(env, :hovercraft_contents, 'eels')
     [200, {}, ['hello']]
+  when %r{^/hello/(\w+)$}
+    [200, {}, ["Hello #{$1}"]]
   else
     [404, {}, ['what?']]
   end
@@ -35,4 +37,26 @@ RSpec.describe "#{Rack::Honeycomb::Middleware} with plain Rack app" do
   end
 
   include_examples 'Rack::Honeycomb::Middleware'
+
+  describe 'URL patterns' do
+    # Pure Rack does not define any routing mechanism and thus doesn't have a
+    # notion of "URL patterns". The test app above includes an example
+    # routing implementation using a regex. This test just serves as
+    # documentation that we don't (and can't) do anything clever with the URLs
+    # in this case. Contrast with sinatra_spec where we report the URL pattern
+    # from the route rather than the literal URL.
+
+    before { get '/hello/Honeycomb' }
+
+    it 'reports the actual URL requested, not the URL pattern declared in the app' do
+      expect(last_response.body).to eq('Hello Honeycomb') # sanity check the test app
+
+      expect(emitted_event.data).to include('request.path' => '/hello/Honeycomb')
+      expect(emitted_event.data).to_not include('request.route')
+    end
+
+    it 'uses the HTTP verb and path as the "name" field of the event' do
+      expect(emitted_event.data).to include('name' => 'GET /hello/Honeycomb')
+    end
+  end
 end
