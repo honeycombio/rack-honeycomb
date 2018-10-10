@@ -153,6 +153,33 @@ module Rack
 
         # overwrite 'name' (previously set in add_request_fields)
         event.add_field('name', "#{rails_params[:controller]}##{rails_params[:action]}")
+
+        event.add_field('request.route', extract_rails_route(env))
+      end
+
+      def extract_rails_route(env)
+        # egregious and probably slow hack to get the formatted route
+        # TODO there must be a better way
+        routes = env['action_dispatch.routes']
+        request = ::ActionDispatch::Request.new(env)
+
+        formatted_route = nil
+
+        routes.router.recognize(request) do |route, _|
+          # make a hash where each param ("part") in the route is given its
+          # own name as a value, e.g. {:id => ":id"}
+          symbolic_params = {}
+          route.required_parts.each do |part|
+            symbolic_params[part] = ":#{part}"
+          end
+          # then ask the route to format itself using those param "values"
+          formatted_route = route.format(symbolic_params)
+        end
+
+        "#{env['REQUEST_METHOD']} #{formatted_route}"
+      rescue StandardError => e
+        debug "couldn't extract named route for request: #{e.class}: #{e}"
+        nil
       end
 
       def add_app_fields(event, env)
