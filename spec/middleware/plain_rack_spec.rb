@@ -11,6 +11,7 @@ RACK_APP = lambda do |env|
   when '/'
     [200, {}, ['narf']]
   when '/explode'
+    Rack::Honeycomb.add_field(env, :email, 'test@example.com')
     raise 'kaboom!'
   when '/annotated'
     Rack::Honeycomb.add_field(env, :hovercraft_contents, 'eels')

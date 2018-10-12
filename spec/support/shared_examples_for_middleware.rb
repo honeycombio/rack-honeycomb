@@ -70,6 +70,10 @@ RSpec.shared_examples 'Rack::Honeycomb::Middleware' do |package:, package_versio
       expect(emitted_event.data['duration_ms']).to be_a Numeric
     end
 
+    it 'still includes user-supplied fields' do
+      expect(emitted_event.data).to include('app.email' => 'test@example.com')
+    end
+
     it 'captures exceptions' do
       expect(emitted_event.data).to include(
         'request.error' => 'RuntimeError',

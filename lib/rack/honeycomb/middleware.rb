@@ -73,13 +73,6 @@ module Rack
           @app.call(env)
         end
 
-        # TODO seems to need to be called _after_ processing the request. Would
-        # be better if we could do it before. Can we do that by changing
-        # middleware order?
-        add_sinatra_fields(ev, env) if @is_sinatra
-
-        add_app_fields(ev, env)
-
         add_response_fields(ev, status, headers, body)
 
         [status, headers, body]
@@ -93,6 +86,10 @@ module Rack
         if ev && start
           finish = Time.now
           ev.add_field('duration_ms', (finish - start) * 1000)
+
+          add_sinatra_fields(ev, env) if @is_sinatra
+
+          add_app_fields(ev, env)
 
           ev.send
         end
