@@ -1,4 +1,4 @@
-RSpec.shared_examples 'Rack::Honeycomb::Middleware' do
+RSpec.shared_examples 'Rack::Honeycomb::Middleware' do |package:, package_version:|
   let(:emitted_event) do
     events = fakehoney.events
     expect(events.size).to eq(1)
@@ -28,8 +28,8 @@ RSpec.shared_examples 'Rack::Honeycomb::Middleware' do
 
     it 'includes meta fields in the event' do
       expect(emitted_event.data).to include(
-        'meta.package' => 'rack',
-        'meta.package_version' => '1.3',
+        'meta.package' => package,
+        'meta.package_version' => package_version,
       )
     end
   end

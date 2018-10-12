@@ -37,7 +37,7 @@ RSpec.describe "#{Rack::Honeycomb::Middleware} with Sinatra" do
     expect(last_response.body).to eq('narf')
   end
 
-  include_examples 'Rack::Honeycomb::Middleware'
+  include_examples 'Rack::Honeycomb::Middleware', package: 'sinatra', package_version: ::Sinatra::VERSION
 
   describe 'URL patterns' do
     before { get '/hello/Honeycomb' }

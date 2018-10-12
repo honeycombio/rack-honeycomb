@@ -36,7 +36,7 @@ RSpec.describe "#{Rack::Honeycomb::Middleware} with plain Rack app" do
     expect(last_response.body).to eq('narf')
   end
 
-  include_examples 'Rack::Honeycomb::Middleware'
+  include_examples 'Rack::Honeycomb::Middleware', package: 'rack', package_version: ::Rack::VERSION.join('.')
 
   describe 'URL patterns' do
     # Pure Rack does not define any routing mechanism and thus doesn't have a

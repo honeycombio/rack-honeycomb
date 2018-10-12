@@ -33,6 +33,17 @@ module Rack
         @logger = options.delete(:logger)
         @logger ||= ::Honeycomb.logger if defined?(::Honeycomb.logger)
 
+        @is_sinatra = options.delete(:is_sinatra)
+        debug 'Enabling Sinatra-specific fields' if @is_sinatra
+
+        # report meta.package = rack only if we have no better information
+        package = 'rack'
+        package_version = RACK_VERSION
+        if @is_sinatra
+          package = 'sinatra'
+          package_version = ::Sinatra::VERSION
+        end
+
         honeycomb = if client = options.delete(:client)
                        debug "initialized with #{client.class.name} via :client option"
                        client
@@ -45,14 +56,11 @@ module Rack
                      end
         @builder = honeycomb.builder.
           add(
-            'meta.package' => 'rack',
-            'meta.package_version' => RACK_VERSION,
+            'meta.package' => package,
+            'meta.package_version' => package_version,
             'type' => EVENT_TYPE,
             'meta.local_hostname' => Socket.gethostname,
           )
-
-        @is_sinatra = options.delete(:is_sinatra)
-        debug 'Enabling Sinatra-specific fields' if @is_sinatra
       end
 
       def call(env)
