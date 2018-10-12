@@ -25,7 +25,11 @@ class TestApp < Rails::Application
     get '/explode', to: 'hello#explode'
     get '/explosions/:message', to: 'hello#explode'
 
-    root 'hello#index'
+    if Rails::VERSION::MAJOR < 4
+      root to: 'hello#index'
+    else
+      root 'hello#index'
+    end
   end
 end
 
