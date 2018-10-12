@@ -136,7 +136,6 @@ module Rack
       end
 
       def add_rails_fields(event, env)
-        # TODO what minimum Rails version does this need?
         rails_params = env['action_dispatch.request.parameters']
         unless rails_params.kind_of? Hash
           debug "Got unexpected type #{rails_params.class} for env['action_dispatch.request.parameters']"

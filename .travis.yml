@@ -4,6 +4,10 @@ rvm:
   - 2.3
   - 2.4
   - 2.5
+gemfile:
+  - Gemfile
+  - Gemfile.rails3.rb
+  - Gemfile.rails4.rb
 deploy:
   provider: rubygems
   gem: rack-honeycomb
