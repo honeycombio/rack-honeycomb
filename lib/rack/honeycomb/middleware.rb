@@ -2,6 +2,7 @@ require "libhoney"
 
 require 'rack'
 require "rack/honeycomb/version"
+require 'securerandom'
 
 module Rack
   module Honeycomb
@@ -204,8 +205,6 @@ module Rack
 
         ::Honeycomb.with_trace_context(trace_context) do |trace_id, parent_span_id, context|
           event.add_field 'trace.trace_id', trace_id
-          span_id = trace_id # so this shows up as a root span
-
           event.add_field 'trace.parent_id', parent_span_id if parent_span_id
           if context
             context.each do |k, v|
@@ -213,6 +212,7 @@ module Rack
             end
           end
 
+          span_id = SecureRandom.uuid
           event.add_field 'trace.span_id', span_id
 
           ::Honeycomb.with_span_id(span_id) do
