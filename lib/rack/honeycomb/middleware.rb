@@ -186,8 +186,8 @@ module Rack
         # anything inside the Rack handler.
         env.each_pair do |k, v|
           if k.is_a?(String) && k.match(ENV_REGEX)
-            namespaced_k = "#{APP_FIELD_NAMESPACE}.#{k.sub(ENV_REGEX, '')}"
-            event.add_field(namespaced_k, v)
+            field_name = k.sub(ENV_REGEX, '')
+            add_app_field(event, field_name, v)
             env.delete(k)
           end
         end
@@ -198,16 +198,35 @@ module Rack
       end
 
       def adding_span_metadata_if_available(event, env)
-        return yield unless defined?(::Honeycomb.with_trace_id)
+        return yield unless defined?(::Honeycomb.with_trace_context)
 
-        ::Honeycomb.with_trace_id do |trace_id|
+        trace_context = trace_context_from_header(env)
+
+        ::Honeycomb.with_trace_context(trace_context) do |trace_id, parent_span_id, context|
           event.add_field 'trace.trace_id', trace_id
           span_id = trace_id # so this shows up as a root span
+
+          event.add_field 'trace.parent_id', parent_span_id if parent_span_id
+          if context
+            context.each do |k, v|
+              add_app_field(event, k, v)
+            end
+          end
+
           event.add_field 'trace.span_id', span_id
+
           ::Honeycomb.with_span_id(span_id) do
             yield
           end
         end
+      end
+
+      def trace_context_from_header(env)
+        env['HTTP_X_HONEYCOMB_TRACE']
+      end
+
+      def add_app_field(event, k, v)
+        event.add_field "#{APP_FIELD_NAMESPACE}.#{k}", v
       end
     end
 
