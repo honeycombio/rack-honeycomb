@@ -55,9 +55,5 @@ RSpec.describe "#{Rack::Honeycomb::Middleware} with plain Rack app" do
       expect(emitted_event.data).to include('request.path' => '/hello/Honeycomb')
       expect(emitted_event.data).to_not include('request.route')
     end
-
-    it 'uses the HTTP verb and path as the "name" field of the event' do
-      expect(emitted_event.data).to include('name' => 'GET /hello/Honeycomb')
-    end
   end
 end

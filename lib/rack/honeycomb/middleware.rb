@@ -67,7 +67,6 @@ module Rack
           add(
             'meta.package' => package,
             'meta.package_version' => package_version,
-            'type' => EVENT_TYPE,
             'meta.local_hostname' => Socket.gethostname,
           )
       end
@@ -78,7 +77,7 @@ module Rack
         add_request_fields(ev, env)
 
         start = Time.now
-        status, headers, body = adding_span_metadata_if_available(ev, env) do
+        status, headers, body = with_tracing_if_available(ev, env) do
           @app.call(env)
         end
 
@@ -111,10 +110,6 @@ module Rack
       end
 
       def add_request_fields(event, env)
-        event.add_field('name', "#{env['REQUEST_METHOD']} #{env['PATH_INFO']}")
-        # N.B. 'name' may be overwritten later by add_sinatra_fields or
-        # add_rails_fields
-
         event.add_field('request.method', env['REQUEST_METHOD'])
         event.add_field('request.path', env['PATH_INFO'])
         event.add_field('request.protocol', env['rack.url_scheme'])
@@ -198,24 +193,20 @@ module Rack
         event.add_field('response.status_code', status)
       end
 
-      def adding_span_metadata_if_available(event, env)
-        return yield unless defined?(::Honeycomb.with_trace_context)
+      def with_tracing_if_available(event, env)
+        return yield unless defined?(::Honeycomb::Beeline::VERSION)
 
-        trace_context = trace_context_from_header(env)
+        name = "#{env['REQUEST_METHOD']} #{env['PATH_INFO']}"
+        # N.B. 'name' field may be overwritten later by add_sinatra_fields or
+        # add_rails_fields
 
-        ::Honeycomb.with_trace_context(trace_context) do |trace_id, parent_span_id, context|
-          event.add_field 'trace.trace_id', trace_id
-          event.add_field 'trace.parent_id', parent_span_id if parent_span_id
-          if context
-            context.each do |k, v|
-              add_app_field(event, k, v)
-            end
-          end
-
-          span_id = SecureRandom.uuid
-          event.add_field 'trace.span_id', span_id
-
-          ::Honeycomb.with_span_id(span_id) do
+        encoded_context = trace_context_from_header(env)
+        ::Honeycomb.trace_from_encoded_context(encoded_context) do
+          ::Honeycomb.span_for_existing_event(
+            event,
+            name: name,
+            type: EVENT_TYPE,
+          ) do
             yield
           end
         end

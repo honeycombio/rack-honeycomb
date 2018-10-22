@@ -131,10 +131,6 @@ RSpec.shared_examples 'Rails app' do |controller:|
         'request.action' => 'show',
       )
     end
-
-    it 'uses the Rails controller action as the "name" field of the event' do
-      expect(emitted_event.data).to include('name' => "#{controller}#show")
-    end
   end
 
   describe 'routing for an erroring request' do
@@ -158,10 +154,6 @@ RSpec.shared_examples 'Rails app' do |controller:|
         'request.controller' => controller,
         'request.action' => 'explode',
       )
-    end
-
-    it 'uses the Rails controller action as the "name" field of the event' do
-      expect(emitted_event.data).to include('name' => "#{controller}#explode")
     end
   end
 end

@@ -8,10 +8,6 @@ RSpec.shared_examples 'Rack::Honeycomb::Middleware' do |package:, package_versio
   describe 'after the app processes a request' do
     before { get '/' }
 
-    it 'sends an http_server event' do
-      expect(emitted_event.data).to include('type' => 'http_server')
-    end
-
     it 'includes basic request and response fields' do
       expect(emitted_event.data).to include(
         'request.method' => 'GET',
