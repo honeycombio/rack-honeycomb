@@ -83,7 +83,7 @@ module Rack
           @logger.debug "#{self.name}: #{msg}" if @logger
         end
 
-        def warn(*args)
+        def warn(msg)
           @logger.warn "#{self.name}: #{msg}" if @logger
         end
 
