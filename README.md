@@ -16,7 +16,7 @@ require 'rack/honeycomb'
 use Rack::Honeycomb::Middleware, writekey: "<YOUR WRITEKEY HERE>", dataset: "<YOUR DATASET NAME HERE>"
 
 get('/hello') do
-  Rack::Honeycomb.add_field :greeting, 'hello'
+  Rack::Honeycomb.add_field env, :greeting, 'hello'
   "Hello, world!\n"
 end
 ```
