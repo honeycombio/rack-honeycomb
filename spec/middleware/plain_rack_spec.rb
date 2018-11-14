@@ -3,9 +3,6 @@ require 'socket'
 
 require 'rack/honeycomb/middleware'
 
-require 'support/shared_examples_for_middleware'
-
-
 RACK_APP = lambda do |env|
   case env['PATH_INFO']
   when '/'
