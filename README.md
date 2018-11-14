@@ -32,7 +32,7 @@ If honeycomb-rails doesn't work for you, this Rack middleware should work for Ra
 require 'rack/honeycomb'
 
 class Application < Rails::Application
-  config.middleware.use Rack::Honeycomb::Middleware, writekey: "<YOUR WRITEKEY HERE>", dataset: "<YOUR DATASET NAME HERE>"
+  config.middleware.use Rack::Honeycomb::Middleware, writekey: "<YOUR WRITEKEY HERE>", dataset: "<YOUR DATASET NAME HERE>", is_rails: true
 end
 ```
 
