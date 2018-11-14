@@ -23,9 +23,11 @@ end
 
 ## Adding instrumentation to a Rails application
 
-For more fully-featured Rails support, see [honeycomb-rails](https://github.com/honeycombio/honeycomb-rails).
+For more fully-featured Rails support, see [beeline-ruby](https://github.com/honeycombio/beeline-ruby).
 
-If honeycomb-rails doesn't work for you, this Rack middleware should work for Rails apps too:
+[beeline-ruby](https://github.com/honeycombio/beeline-ruby) includes this gem along with active record support.
+
+If beeline-ruby doesn't work for you, you can include this middleware standalone
 
 ```ruby
 # config/application.rb
