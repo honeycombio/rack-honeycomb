@@ -20,17 +20,37 @@ module Rack
       USER_AGENT_SUFFIX = "rack-honeycomb/#{VERSION}"
       EVENT_TYPE = 'http_server'.freeze
 
+      RAILS_SPECIAL_PARAMS = %w(controller action).freeze
+
       ##
       # @param  [#call]                       app
       # @param  [Hash{Symbol => Object}]      options
       # @option options [String]  :writekey   (nil)
       # @option options [String]  :dataset    (nil)
       # @option options [String]  :api_host   (nil)
+      # @option options [Boolean] :is_sinatra (false)
+      # @option options [Boolean] :is_rails   (false)
       def initialize(app, options = {})
         @app, @options = app, options
 
         @logger = options.delete(:logger)
         @logger ||= ::Honeycomb.logger if defined?(::Honeycomb.logger)
+
+        @is_sinatra = options.delete(:is_sinatra)
+        debug 'Enabling Sinatra-specific fields' if @is_sinatra
+        @is_rails = options.delete(:is_rails)
+        debug 'Enabling Rails-specific fields' if @is_rails
+
+        # report meta.package = rack only if we have no better information
+        package = 'rack'
+        package_version = RACK_VERSION
+        if @is_rails
+          package = 'rails'
+          package_version = ::Rails::VERSION::STRING
+        elsif @is_sinatra
+          package = 'sinatra'
+          package_version = ::Sinatra::VERSION
+        end
 
         honeycomb = if client = options.delete(:client)
                        debug "initialized with #{client.class.name} via :client option"
@@ -44,13 +64,11 @@ module Rack
                      end
         @builder = honeycomb.builder.
           add(
-            'meta.package' => 'rack',
-            'meta.package_version' => RACK_VERSION,
+            'meta.package' => package,
+            'meta.package_version' => package_version,
             'type' => EVENT_TYPE,
             'meta.local_hostname' => Socket.gethostname,
           )
-
-        @service_name = options.delete(:service_name) || :rack
       end
 
       def call(env)
@@ -62,8 +80,6 @@ module Rack
         status, headers, body = adding_span_metadata_if_available(ev, env) do
           @app.call(env)
         end
-
-        add_app_fields(ev, env)
 
         add_response_fields(ev, status, headers, body)
 
@@ -79,6 +95,11 @@ module Rack
           finish = Time.now
           ev.add_field('duration_ms', (finish - start) * 1000)
 
+          add_sinatra_fields(ev, env) if @is_sinatra
+          add_rails_fields(ev, env) if @is_rails
+
+          add_app_fields(ev, env)
+
           ev.send
         end
       end
@@ -90,6 +111,8 @@ module Rack
 
       def add_request_fields(event, env)
         event.add_field('name', "#{env['REQUEST_METHOD']} #{env['PATH_INFO']}")
+        # N.B. 'name' may be overwritten later by add_sinatra_fields or
+        # add_rails_fields
 
         event.add_field('request.method', env['REQUEST_METHOD'])
         event.add_field('request.path', env['PATH_INFO'])
@@ -103,6 +126,59 @@ module Rack
         event.add_field('request.host', env['HTTP_HOST'])
         event.add_field('request.remote_addr', env['REMOTE_ADDR'])
         event.add_field('request.header.user_agent', env['HTTP_USER_AGENT'])
+      end
+
+      def add_sinatra_fields(event, env)
+        route = env['sinatra.route']
+        event.add_field('request.route', route)
+        # overwrite 'name' (previously set in add_request_fields)
+        event.add_field('name', route)
+      end
+
+      def add_rails_fields(event, env)
+        rails_params = env['action_dispatch.request.parameters']
+        unless rails_params.kind_of? Hash
+          debug "Got unexpected type #{rails_params.class} for env['action_dispatch.request.parameters']"
+          return
+        end
+
+        rails_params.each do |param, value|
+          if RAILS_SPECIAL_PARAMS.include?(param)
+            event.add_field("request.#{param}", value)
+          else
+            event.add_field("request.params.#{param}", value)
+          end
+        end
+
+        # overwrite 'name' (previously set in add_request_fields)
+        event.add_field('name', "#{rails_params[:controller]}##{rails_params[:action]}")
+
+        event.add_field('request.route', extract_rails_route(env))
+      end
+
+      def extract_rails_route(env)
+        # egregious and probably slow hack to get the formatted route
+        # TODO there must be a better way
+        routes = env['action_dispatch.routes']
+        request = ::ActionDispatch::Request.new(env)
+
+        formatted_route = nil
+
+        routes.router.recognize(request) do |route, _|
+          # make a hash where each param ("part") in the route is given its
+          # own name as a value, e.g. {:id => ":id"}
+          symbolic_params = {}
+          route.required_parts.each do |part|
+            symbolic_params[part] = ":#{part}"
+          end
+          # then ask the route to format itself using those param "values"
+          formatted_route = route.format(symbolic_params)
+        end
+
+        "#{env['REQUEST_METHOD']} #{formatted_route}"
+      rescue StandardError => e
+        debug "couldn't extract named route for request: #{e.class}: #{e}"
+        nil
       end
 
       def add_app_fields(event, env)

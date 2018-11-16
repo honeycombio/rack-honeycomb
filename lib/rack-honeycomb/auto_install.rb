@@ -4,25 +4,36 @@ module Rack
     module AutoInstall
       class << self
         def available?(logger: nil)
-          gem 'rack'
-          logger.debug "#{self.name}: detected rack" if logger
-          gem 'sinatra'
-          logger.debug "#{self.name}: detected sinatra, okay to autoinitialise" if logger
-          true
-        rescue Gem::LoadError => e
-          if e.name == 'sinatra'
-            logger.debug "Couldn't detect web framework (#{e.class}: #{e.message}), not autoinitialising rack-honeycomb" if logger
-          else
-            logger.debug "Rack not detected (#{e.class}: #{e.message}), not autoinitialising rack-honeycomb" if logger
+          @logger = logger
+
+          unless has_gem? 'rack'
+            debug 'not autoinitialising rack-honeycomb'
+            return false
           end
-          false
+
+          @has_sinatra = has_gem? 'sinatra'
+          @has_rails = has_gem? 'rails'
+
+          unless @has_sinatra || @has_rails
+            debug "Couldn't detect web framework, not autoinitialising rack-honeycomb"
+            return false
+          end
+
+          true
         end
 
         def auto_install!(honeycomb_client:, logger: nil)
-          require 'rack'
-          require 'sinatra/base'
+          @logger = logger
 
+          require 'rack'
           require 'rack-honeycomb'
+
+          auto_install_sinatra!(honeycomb_client, logger) if @has_sinatra
+          auto_install_rails!(honeycomb_client, logger) if @has_rails
+        end
+
+        def auto_install_sinatra!(honeycomb_client, logger)
+          require 'sinatra/base'
 
           class << ::Sinatra::Base
             alias build_without_honeycomb build
@@ -30,9 +41,9 @@ module Rack
 
           ::Sinatra::Base.define_singleton_method(:build) do |*args, &block|
             if !AutoInstall.already_added
-              logger.debug "Adding Rack::Honeycomb::Middleware to #{self}" if logger
+              AutoInstall.debug "Adding Rack::Honeycomb::Middleware to #{self}"
 
-              self.use Rack::Honeycomb::Middleware, client: honeycomb_client, logger: logger
+              self.use Rack::Honeycomb::Middleware, client: honeycomb_client, logger: logger, is_sinatra: true
               AutoInstall.already_added = true
             else
               # In the case of nested Sinatra apps - apps composed of other apps
@@ -42,7 +53,7 @@ module Rack
               # middleware reliably - so instead, we just want to warn the user
               # and avoid doing anything silly.
               unless AutoInstall.already_warned
-                logger.warn "Honeycomb auto-instrumentation of Sinatra will probably not work, try manual installation" if logger
+                AutoInstall.warn 'Honeycomb auto-instrumentation of Sinatra will probably not work, try manual installation'
                 AutoInstall.already_warned = true
               end
             end
@@ -56,8 +67,35 @@ module Rack
           end)
         end
 
+        def auto_install_rails!(honeycomb_client, logger)
+          require 'rack-honeycomb/railtie'
+          ::Rack::Honeycomb::Railtie.init(
+            honeycomb_client: honeycomb_client,
+            logger: logger,
+          )
+          debug 'Loaded Railtie'
+        end
+
         attr_accessor :already_added
         attr_accessor :already_warned
+
+        def debug(msg)
+          @logger.debug "#{self.name}: #{msg}" if @logger
+        end
+
+        def warn(msg)
+          @logger.warn "#{self.name}: #{msg}" if @logger
+        end
+
+        private
+        def has_gem?(gem_name)
+          gem gem_name
+          debug "detected #{gem_name}"
+          true
+        rescue Gem::LoadError => e
+          debug "#{gem_name} not detected (#{e.class}: #{e.message})"
+          false
+        end
       end
     end
   end

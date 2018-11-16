@@ -1,4 +1,5 @@
 require 'rack/test'
+require 'support/shared_examples_for_middleware'
 
 RSpec.configure do |config|
   config.include Rack::Test::Methods

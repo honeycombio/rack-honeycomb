@@ -1,4 +1,4 @@
-RSpec.shared_examples 'Rack::Honeycomb::Middleware' do
+RSpec.shared_examples 'Rack::Honeycomb::Middleware' do |package:, package_version:|
   let(:emitted_event) do
     events = fakehoney.events
     expect(events.size).to eq(1)
@@ -9,10 +9,7 @@ RSpec.shared_examples 'Rack::Honeycomb::Middleware' do
     before { get '/' }
 
     it 'sends an http_server event' do
-      expect(emitted_event.data).to include(
-        'type' => 'http_server',
-        'name' => 'GET /',
-      )
+      expect(emitted_event.data).to include('type' => 'http_server')
     end
 
     it 'includes basic request and response fields' do
@@ -31,8 +28,8 @@ RSpec.shared_examples 'Rack::Honeycomb::Middleware' do
 
     it 'includes meta fields in the event' do
       expect(emitted_event.data).to include(
-        'meta.package' => 'rack',
-        'meta.package_version' => '1.3',
+        'meta.package' => package,
+        'meta.package_version' => package_version,
       )
     end
   end
@@ -71,6 +68,10 @@ RSpec.shared_examples 'Rack::Honeycomb::Middleware' do
     it 'still includes duration' do
       expect(emitted_event.data).to include('duration_ms')
       expect(emitted_event.data['duration_ms']).to be_a Numeric
+    end
+
+    it 'still includes user-supplied fields' do
+      expect(emitted_event.data).to include('app.email' => 'test@example.com')
     end
 
     it 'captures exceptions' do

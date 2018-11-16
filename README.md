@@ -13,26 +13,28 @@ Attaching the middleware is simple. Inside handlers, you also have the choice of
 require 'sinatra'
 require 'rack/honeycomb'
 
-use Rack::Honeycomb::Middleware, writekey: "<YOUR WRITEKEY HERE>", dataset: "<YOUR DATASET NAME HERE>"
+use Rack::Honeycomb::Middleware, writekey: "<YOUR WRITEKEY HERE>", dataset: "<YOUR DATASET NAME HERE>", is_sinatra: true
 
 get('/hello') do
-  Rack::Honeycomb.add_field :greeting, 'hello'
+  Rack::Honeycomb.add_field env, :greeting, 'hello'
   "Hello, world!\n"
 end
 ```
 
 ## Adding instrumentation to a Rails application
 
-For more fully-featured Rails support, see [honeycomb-rails](https://github.com/honeycombio/honeycomb-rails).
+For more fully-featured Rails support, see [beeline-ruby](https://github.com/honeycombio/beeline-ruby).
 
-If honeycomb-rails doesn't work for you, this Rack middleware should work for Rails apps too:
+[beeline-ruby](https://github.com/honeycombio/beeline-ruby) includes this gem along with active record support.
+
+If beeline-ruby doesn't work for you, you can include this middleware standalone
 
 ```ruby
 # config/application.rb
 require 'rack/honeycomb'
 
 class Application < Rails::Application
-  config.middleware.use Rack::Honeycomb::Middleware, writekey: "<YOUR WRITEKEY HERE>", dataset: "<YOUR DATASET NAME HERE>"
+  config.middleware.use Rack::Honeycomb::Middleware, writekey: "<YOUR WRITEKEY HERE>", dataset: "<YOUR DATASET NAME HERE>", is_rails: true
 end
 ```
 
