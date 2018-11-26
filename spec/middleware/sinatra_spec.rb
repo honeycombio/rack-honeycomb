@@ -56,6 +56,10 @@ RSpec.describe "#{Rack::Honeycomb::Middleware} with Sinatra" do
       )
     end
 
+    it 'uses the URL pattern as the "name" field of the event' do
+      expect(emitted_event.data).to include('name' => 'GET /hello/:name')
+    end
+
     it 'records the param values matched by the route' do
       pending 'probably need to hook into Sinatra more deeply'
 
@@ -71,6 +75,10 @@ RSpec.describe "#{Rack::Honeycomb::Middleware} with Sinatra" do
         'request.path' => '/explosions/oh_no',
         'request.route' => 'GET /explosions/:message',
       )
+    end
+
+    it 'uses the URL pattern as the "name" field of the event' do
+      expect(emitted_event.data).to include('name' => 'GET /explosions/:message')
     end
 
     it 'records the param values matched by the route' do

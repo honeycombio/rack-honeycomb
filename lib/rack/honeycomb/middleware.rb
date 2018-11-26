@@ -110,6 +110,10 @@ module Rack
       end
 
       def add_request_fields(event, env)
+        event.add_field('name', "#{env['REQUEST_METHOD']} #{env['PATH_INFO']}")
+        # N.B. 'name' may be overwritten later by add_sinatra_fields or
+        # add_rails_fields
+
         event.add_field('request.method', env['REQUEST_METHOD'])
         event.add_field('request.path', env['PATH_INFO'])
         event.add_field('request.protocol', env['rack.url_scheme'])
@@ -122,10 +126,6 @@ module Rack
         event.add_field('request.host', env['HTTP_HOST'])
         event.add_field('request.remote_addr', env['REMOTE_ADDR'])
         event.add_field('request.header.user_agent', env['HTTP_USER_AGENT'])
-
-        # N.B. 'name' field may be overwritten later by add_sinatra_fields or
-        # add_rails_fields
-        event.add_field('name', "#{env['REQUEST_METHOD']} #{env['PATH_INFO']}")
       end
 
       def add_sinatra_fields(event, env)
