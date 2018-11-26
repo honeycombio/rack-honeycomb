@@ -2,7 +2,6 @@ require "libhoney"
 
 require 'rack'
 require "rack/honeycomb/version"
-require 'securerandom'
 
 module Rack
   module Honeycomb
