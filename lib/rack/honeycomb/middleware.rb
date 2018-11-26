@@ -66,6 +66,7 @@ module Rack
           add(
             'meta.package' => package,
             'meta.package_version' => package_version,
+            'type' => EVENT_TYPE,
             'meta.local_hostname' => Socket.gethostname,
           )
       end
