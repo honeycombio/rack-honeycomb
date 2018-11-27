@@ -2,7 +2,6 @@ require "libhoney"
 
 require 'rack'
 require "rack/honeycomb/version"
-require 'securerandom'
 
 module Rack
   module Honeycomb
@@ -67,6 +66,7 @@ module Rack
           add(
             'meta.package' => package,
             'meta.package_version' => package_version,
+            'type' => EVENT_TYPE,
             'meta.local_hostname' => Socket.gethostname,
           )
       end
@@ -110,6 +110,10 @@ module Rack
       end
 
       def add_request_fields(event, env)
+        event.add_field('name', "#{env['REQUEST_METHOD']} #{env['PATH_INFO']}")
+        # N.B. 'name' may be overwritten later by add_sinatra_fields or
+        # add_rails_fields
+
         event.add_field('request.method', env['REQUEST_METHOD'])
         event.add_field('request.path', env['PATH_INFO'])
         event.add_field('request.protocol', env['rack.url_scheme'])
@@ -194,21 +198,34 @@ module Rack
       end
 
       def with_tracing_if_available(event, env)
-        return yield unless defined?(::Honeycomb::Beeline::VERSION)
+        # return if we are not using the ruby beeline
+        return yield unless defined?(::Honeycomb)
 
-        name = "#{env['REQUEST_METHOD']} #{env['PATH_INFO']}"
-        # N.B. 'name' field may be overwritten later by add_sinatra_fields or
-        # add_rails_fields
-
-        encoded_context = trace_context_from_header(env)
-        ::Honeycomb.trace_from_encoded_context(encoded_context) do
-          ::Honeycomb.span_for_existing_event(
-            event,
-            name: name,
-            type: EVENT_TYPE,
-          ) do
-            yield
+        # beeline version <= 0.5.0
+        if ::Honeycomb.respond_to? :with_trace_id
+          ::Honeycomb.with_trace_id do |trace_id|
+            event.add_field "trace.trace_id", trace_id
+            # so this shows up as a root span
+            event.add_field "trace.span_id", trace_id
+            ::Honeycomb.with_span_id(trace_id) do
+              yield
+            end
           end
+        # beeline version > 0.5.0
+        elsif ::Honeycomb.respond_to? :trace_from_encoded_context
+          encoded_context = trace_context_from_header(env)
+          ::Honeycomb.trace_from_encoded_context(encoded_context) do
+            ::Honeycomb.span_for_existing_event(
+              event,
+              name: nil, # this is only added if it is present, we set the name in #add_request_fields
+              type: EVENT_TYPE,
+            ) do
+              yield
+            end
+          end
+        # fallback if we don't detect any known beeline tracing methods
+        else
+          yield
         end
       end
 
