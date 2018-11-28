@@ -77,7 +77,7 @@ module Rack
         add_request_fields(ev, env)
 
         start = Time.now
-        status, headers, body = adding_span_metadata_if_available(ev, env) do
+        status, headers, body = with_tracing_if_available(ev, env) do
           @app.call(env)
         end
 
@@ -186,8 +186,8 @@ module Rack
         # anything inside the Rack handler.
         env.each_pair do |k, v|
           if k.is_a?(String) && k.match(ENV_REGEX)
-            namespaced_k = "#{APP_FIELD_NAMESPACE}.#{k.sub(ENV_REGEX, '')}"
-            event.add_field(namespaced_k, v)
+            field_name = k.sub(ENV_REGEX, '')
+            add_app_field(event, field_name, v)
             env.delete(k)
           end
         end
@@ -197,17 +197,44 @@ module Rack
         event.add_field('response.status_code', status)
       end
 
-      def adding_span_metadata_if_available(event, env)
-        return yield unless defined?(::Honeycomb.with_trace_id)
+      def with_tracing_if_available(event, env)
+        # return if we are not using the ruby beeline
+        return yield unless defined?(::Honeycomb)
 
-        ::Honeycomb.with_trace_id do |trace_id|
-          event.add_field 'trace.trace_id', trace_id
-          span_id = trace_id # so this shows up as a root span
-          event.add_field 'trace.span_id', span_id
-          ::Honeycomb.with_span_id(span_id) do
-            yield
+        # beeline version <= 0.5.0
+        if ::Honeycomb.respond_to? :with_trace_id
+          ::Honeycomb.with_trace_id do |trace_id|
+            event.add_field "trace.trace_id", trace_id
+            # so this shows up as a root span
+            event.add_field "trace.span_id", trace_id
+            ::Honeycomb.with_span_id(trace_id) do
+              yield
+            end
           end
+        # beeline version > 0.5.0
+        elsif ::Honeycomb.respond_to? :trace_from_encoded_context
+          encoded_context = trace_context_from_header(env)
+          ::Honeycomb.trace_from_encoded_context(encoded_context) do
+            ::Honeycomb.span_for_existing_event(
+              event,
+              name: nil, # this is only added if it is present, we set the name in #add_request_fields
+              type: EVENT_TYPE,
+            ) do
+              yield
+            end
+          end
+        # fallback if we don't detect any known beeline tracing methods
+        else
+          yield
         end
+      end
+
+      def trace_context_from_header(env)
+        env['HTTP_X_HONEYCOMB_TRACE']
+      end
+
+      def add_app_field(event, k, v)
+        event.add_field "#{APP_FIELD_NAMESPACE}.#{k}", v
       end
     end
 
