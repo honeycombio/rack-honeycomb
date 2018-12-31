@@ -30,6 +30,7 @@ module Rack
       # @option options [String]  :api_host   (nil)
       # @option options [Boolean] :is_sinatra (false)
       # @option options [Boolean] :is_rails   (false)
+      # @option options [Array] :param_whitelist (nil)
       def initialize(app, options = {})
         @app, @options = app, options
 
@@ -40,6 +41,7 @@ module Rack
         debug 'Enabling Sinatra-specific fields' if @is_sinatra
         @is_rails = options.delete(:is_rails)
         debug 'Enabling Rails-specific fields' if @is_rails
+        @param_whitelist = options.delete(:param_whitelist)
 
         # report meta.package = rack only if we have no better information
         package = 'rack'
@@ -145,7 +147,7 @@ module Rack
         rails_params.each do |param, value|
           if RAILS_SPECIAL_PARAMS.include?(param)
             event.add_field("request.#{param}", value)
-          else
+          elsif @param_whitelist.nil? || @param_whitelist.include?(param)
             event.add_field("request.params.#{param}", value)
           end
         end

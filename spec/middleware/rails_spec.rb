@@ -8,7 +8,7 @@ require 'rack/honeycomb/middleware'
 class TestApp < Rails::Application
   FAKEHONEY = Libhoney::TestClient.new
 
-  middleware.use Rack::Honeycomb::Middleware, client: FAKEHONEY, is_rails: true
+  middleware.use Rack::Honeycomb::Middleware, client: FAKEHONEY, is_rails: true, param_whitelist: [ 'message', 'name' ]
 
   # some minimal config Rails expects to be present
   if Rails::VERSION::MAJOR < 4
@@ -24,6 +24,7 @@ class TestApp < Rails::Application
     get '/annotated', to: 'hello#annotated'
     get '/explode', to: 'hello#explode'
     get '/explosions/:message', to: 'hello#explode'
+    get '/disallowed/:not_whitelisted', to: 'hello#disallowed'
 
     if Rails::VERSION::MAJOR < 4
       root to: 'hello#index'
@@ -53,6 +54,10 @@ class HelloController < ActionController::Base
     raise message
   end
 
+  def disallowed
+    render_plain "not allowed"
+  end
+
   private
   def render_plain(text)
     if Rails::VERSION::MAJOR < 4
@@ -69,7 +74,7 @@ if Rails::VERSION::MAJOR >= 5
 
     config.api_only = true
 
-    middleware.use Rack::Honeycomb::Middleware, client: FAKEHONEY, is_rails: true
+    middleware.use Rack::Honeycomb::Middleware, client: FAKEHONEY, is_rails: true, param_whitelist: [ 'message', 'name' ]
 
     # some minimal config Rails expects to be present
     config.secret_key_base = 'test'
@@ -81,6 +86,7 @@ if Rails::VERSION::MAJOR >= 5
       get '/annotated', to: 'hello_api#annotated'
       get '/explode', to: 'hello_api#explode'
       get '/explosions/:message', to: 'hello_api#explode'
+      get '/disallowed/:not_whitelisted', to: 'hello_api#disallowed'
 
       root 'hello_api#index'
     end
@@ -104,6 +110,10 @@ if Rails::VERSION::MAJOR >= 5
       Rack::Honeycomb.add_field(request.env, :email, 'test@example.com')
       message = params[:message] || 'kaboom!'
       raise message
+    end
+
+    def disallowed
+      render_plain "not allowed"
     end
   end
 end
@@ -162,6 +172,32 @@ RSpec.shared_examples 'Rails app' do |controller:|
 
     it 'uses the Rails controller action as the "name" field of the event' do
       expect(emitted_event.data).to include('name' => "#{controller}#explode")
+    end
+  end
+
+  describe 'routing for a request with a disallowed request' do
+    before { get '/disallowed/justkidding' }
+
+    it 'reports the declared route, as well as the actual URL requested' do
+      expect(emitted_event.data).to include(
+        'request.path' => '/disallowed/justkidding',
+        'request.route' => 'GET /disallowed/:not_whitelisted',
+      )
+    end
+
+    it 'records the param values matched by the route' do
+      expect(emitted_event.data).to_not include('request.params.not_whitelisted')
+    end
+
+    it 'records the Rails controller and action that were invoked' do
+      expect(emitted_event.data).to include(
+        'request.controller' => controller,
+        'request.action' => 'disallowed',
+      )
+    end
+
+    it 'uses the Rails controller action as the "name" field of the event' do
+      expect(emitted_event.data).to include('name' => "#{controller}#disallowed")
     end
   end
 end
