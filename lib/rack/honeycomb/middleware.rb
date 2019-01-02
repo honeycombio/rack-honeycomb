@@ -145,8 +145,6 @@ module Rack
         rails_params.each do |param, value|
           if RAILS_SPECIAL_PARAMS.include?(param)
             event.add_field("request.#{param}", value)
-          else
-            event.add_field("request.params.#{param}", value)
           end
         end
 

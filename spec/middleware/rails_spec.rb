@@ -121,10 +121,6 @@ RSpec.shared_examples 'Rails app' do |controller:|
       )
     end
 
-    it 'records the param values matched by the route' do
-      expect(emitted_event.data).to include('request.params.name' => 'Honeycomb')
-    end
-
     it 'records the Rails controller and action that were invoked' do
       expect(emitted_event.data).to include(
         'request.controller' => controller,
@@ -147,10 +143,6 @@ RSpec.shared_examples 'Rails app' do |controller:|
         'request.path' => '/explosions/oh_no',
         'request.route' => 'GET /explosions/:message',
       )
-    end
-
-    it 'records the param values matched by the route' do
-      expect(emitted_event.data).to include('request.params.message' => 'oh_no')
     end
 
     it 'records the Rails controller and action that were invoked' do
