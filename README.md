@@ -1,3 +1,5 @@
+# **DEPRECATION NOTICE**: This gem is deprecated, please use [honeycomb-beeline](https://github.com/honeycombio/beeline-ruby) instead
+
 # Honeycomb middleware for Rack applications
 
 This is Rack middleware that sends request/response data to [Honeycomb](https://honeycomb.io).  You can use `Rack::Honeycomb` with any Ruby web framework based on Rack, including Ruby on Rails and Sinatra.
@@ -61,20 +63,3 @@ gem "rack-honeycomb", :git => "https://github.com/honeycombio/rack-honeycomb.git
 ## Documentation
 
 See [rubydoc](http://www.rubydoc.info/gems/rack-honeycomb/) for gem documentation.
-
-## Contributions
-
-Features, bug fixes and other changes are gladly accepted. Please
-open issues or a pull request with your change. Remember to add your name to the
-CONTRIBUTORS file!
-
-All contributions will be released under the Apache License 2.0.
-
-### Releasing a new version
-
-Travis will automatically upload tagged releases to Rubygems. To release a new
-version, run
-```
-bump patch --tag   # Or bump minor --tag, etc.
-git push --follow-tags
-```
